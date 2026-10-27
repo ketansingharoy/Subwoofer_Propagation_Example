@@ -1,0 +1,2 @@
+station,exclude_start,exclude_end,reason
+S051b,2024-04-08 19:20:00,2024-04-08 23:35:00,"visual inspection: TL offset vs spherical spreading during this window (2:20-6:35 PM America/Chicago) -- likely instrument still in transit between the S051a and S051b deployment locations, or a mismarked deployment boundary"

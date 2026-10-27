@@ -1,0 +1,61 @@
+station,select,remark
+S005a,1,
+S007a,1,reference receiver
+S007b,0,"bad data, incomplete time"
+S011a,1,
+S016a,0,"bad data, time trend problem"
+S018a,1,
+S019a,1,
+S020a,1,
+S021a,1,
+S023a,1,
+S029a,0,"bad data, time trend problem"
+S046a,1,
+S051a,1,
+S051b,1,
+S052a,1,
+S052b,0,"bad data, incomplete time"
+S052c,0,"bad data, incomplete time"
+S053a,1,
+S054a,0,"bad data, spurious amplitude, time"
+S055a,1,
+S055b,0,"bad data, incomplete time"
+S056a,1,source receiver
+S057a,0,"bad data, time trend problem"
+S058b,0,"bad data, incomplete time"
+S058c,0,"bad data, incomplete time"
+S058d,0,"bad data, incomplete time"
+S059a,1,
+S060a,1,
+S061a,1,
+S063a,1,
+S064a,1,
+S065a,1,
+S065b,0,"bad data, incomplete time"
+S065c,0,"bad data, incomplete time"
+S066a,1,
+S067a,1,
+S068a,1,
+S068b,1,
+S069a,1,
+S071a,0,"bad data, time trend problem"
+S072a,1,
+S074a,1,
+S076a,1,
+S078a,1,
+S079a,1,
+S080a,1,
+S083a,1,
+S083b,2,incomplete time. possible amplitude problem
+S084a,1,
+S084b,0,"bad data, incomplete time"
+S086a,1,
+S087a,1,
+S087b,2,incomplete time. possible amplitude problem
+S089a,1,
+S090a,0,"bad data, time trend problem"
+S092a,1,
+S093a,1,
+S094a,1,
+S095a,0,"bad data, incomplete time"
+S096a,1,

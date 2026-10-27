@@ -1,0 +1,10 @@
+event_key,time,timezone,description
+exp_start,2024-04-08 11:00:00,America/Chicago,Experiment start time
+exp_end,2024-04-09 05:00:00,America/Chicago,Experiment end time
+eclipse_start,2024-04-08 12:23:00,America/Chicago,Eclipse start time
+totality,2024-04-08 13:42:00,America/Chicago,Eclipse maximum / totality
+t_min,2024-04-08 13:55:05,America/Chicago,Minimum temperature after totality
+eclipse_end,2024-04-08 15:02:00,America/Chicago,Eclipse end time
+sunset,2024-04-08 19:51:00,America/Chicago,Sunset
+midnight,2024-04-09 00:00:00,America/Chicago,Midnight
+thunderstorm,2024-04-09 03:20:00,America/Chicago,Thunderstorm onset

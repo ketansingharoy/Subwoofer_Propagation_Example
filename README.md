@@ -11,12 +11,12 @@ From this folder, create the environment and register its notebook kernel:
 
 ```sh
 mamba env create -f environment.yml
-mamba activate smu_erdc_example
-python -m ipykernel install --user --name smu_erdc_example --display-name "Python (smu_erdc_example)"
+mamba activate sa
+python -m ipykernel install --user --name sa --display-name "Python (sa)"
 jupyter lab
 ```
 
-Conda users can replace `mamba` with `conda`. Select the **Python (smu_erdc_example)**
+Conda users can replace `mamba` with `conda`. Select the **Python (sa)**
 kernel. Open and run the notebooks in order; each notebook also runs independently
 of the other notebooks. Notebook 3 calculates its own gradient tables.
 
@@ -33,7 +33,7 @@ of the other notebooks. Notebook 3 calculates its own gradient tables.
 | `data/acoustic_metrics/` | Original raw-band metric CSVs for the ten requested receivers. |
 | `data/aws/` | Original AWS observations and location. |
 | `data/stations/` | Station coordinates, quality selection and time exclusions. |
-| `data/era5/` | ERA5 profiles needed for the atmospheric comparisons. |
+| `data/era5/` | One CSV of hourly 0–50 m ERA5 sound-speed and wind gradients (`a_t`, `a_u`, `a_v`; s⁻¹). |
 | `data/gradients/` | Recomputed WNW/South minute and hourly gradients and ERA5 comparison table. |
 | `validation/` | Processing provenance and verification results. |
 
@@ -58,3 +58,14 @@ of the other notebooks. Notebook 3 calculates its own gradient tables.
   ERA5 is a reference, not an input to the inversion.
 - No pressure calibration is added: raw samples and metadata are retained from
   the original reader. Relative TL uses receiver/reference amplitudes.
+
+## Precomputed ERA5 gradients
+
+`data/era5/gradients_0_50m.csv` contains all 48 supplied hourly times in UTC.
+Each component is a linear least-squares slope over the same profile samples
+as the original 0–50 m comparison (height cutoff 50.1 m for numerical tolerance).
+Sound speed is computed as `sqrt(1.4 * 287.058 * T_K)` before fitting `a_t`.
+For azimuth clockwise from north, `a_eff = a_t + a_u*sin(az) + a_v*cos(az)`.
+Linearity of least squares preserves the original directional gradients.
+The celerity comparison continues to use AWS surface sound speed. Full ERA5
+profiles and higher vertical derivatives cannot be recovered from these slopes.

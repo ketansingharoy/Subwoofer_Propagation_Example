@@ -7,7 +7,6 @@ or absolute data path is required. See validation/provenance.json.
 from pathlib import Path
 import json
 import pickle
-import re
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -22,7 +21,7 @@ from obspy.geodetics import gps2dist_azimuth
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / 'data'
 PATH_AWS_DATA = DATA / 'aws' / 'AWS_heroy_data_UTC.csv'
-TMPL_NWP_DATA = str(DATA / 'era5' / 'ecmwf_in_sfc_ecl_{ymdh}_dz10_1d.dat')
+PATH_ERA5_GRADIENTS = DATA / 'era5' / 'gradients_0_50m.csv'
 _df_aws = None
 K_pierce = 0.509 / (8 * np.pi ** 2) ** (1 / 3)
 RESP_COMBOS = [('linear', False, 'linear'), ('wpws', True, 'pws')]
@@ -1100,132 +1099,18 @@ def get_aws_at(t, tz_str=None, t_tol=60.0):
 
 
 
-# Functions from src/io_nwp.py
+def get_era5_gradients_at(t, tz_str=None):
+    """Read 0–50 m least-squares slopes (s^-1) at the nearest UTC hour.
 
-def _wind_speed_direction(u, v):
-    """Cartesian wind components → meteorological speed and direction.
-
-    Parameters
-    ----------
-    u : float or array-like  Zonal (East positive) component (m/s).
-    v : float or array-like  Meridional (North positive) component (m/s).
-
-    Returns
-    -------
-    ws  : Wind speed (m/s).
-    wd  : Wind direction, coming from (° CW from N).
+    a_t is the adiabatic sound-speed slope; a_u and a_v are eastward and
+    northward wind slopes. These slopes do not reconstruct the full profiles.
     """
-    ws = np.sqrt(u**2 + v**2)
-    wd = (np.rad2deg(np.arctan2(u, v)) + 180.0) % 360.0
-    return ws, wd
+    t_hr = to_utc_naive(t, tz_str).round('h')
+    gradients = pd.read_csv(PATH_ERA5_GRADIENTS, parse_dates=['t_utc']).set_index('t_utc')
+    if t_hr not in gradients.index:
+        raise ValueError(f'No ERA5 gradients for {t_hr} UTC.')
+    return gradients.loc[t_hr]
 
-
-def _parse_nwp_file(file_ec, z_max):
-    """Parse one ncpaprop-format ECMWF file into a DataFrame.
-
-    Parameters
-    ----------
-    file_ec : Path or str
-        Path to the .dat file.
-    z_max : float or None
-        Maximum height AGL to keep (m).  None → return full profile.
-
-    Returns
-    -------
-    df_ec : pd.DataFrame
-        Columns: z_m, T_K, T_C, u_ms, v_ms, ws_ms, wd_deg.
-    """
-    # Read ground height (km ASL) from comment header
-    z_gnd = None
-    with open(file_ec) as fh:
-        for line in fh:
-            mg = re.search(r'Ground Height\s*=\s*([\d.]+)', line)
-            if mg:
-                z_gnd = float(mg.group(1))
-                break
-    if z_gnd is None:
-        raise ValueError(f"'Ground Height' not found in header of {file_ec}")
-
-    # Load numerical block (lines starting with '#' are skipped)
-    d = np.loadtxt(file_ec, comments='#')
-
-    # Convert km ASL → m AGL
-    z_m = (d[:, 0] - z_gnd) * 1000.0
-
-    # Height mask
-    if z_max is not None:
-        mask = z_m <= z_max
-    else:
-        mask = np.ones(len(z_m), dtype=bool)
-
-    z_m  = z_m[mask]
-    T_K  = d[mask, 1]
-    T_C  = T_K - 273.15
-    u_ms = d[mask, 2]
-    v_ms = d[mask, 3]
-    ws_ms, wd_deg = _wind_speed_direction(u_ms, v_ms)
-
-    df_nw = pd.DataFrame({
-        'z_m':    z_m,
-        'T_K':    T_K,
-        'T_C':    T_C,
-        'u_ms':   u_ms,
-        'v_ms':   v_ms,
-        'ws_ms':  ws_ms,
-        'wd_deg': wd_deg,
-    })
-    return df_nw
-
-
-def get_nwp_at(t, tz_str=None, z_max=1000.0):
-    """Return ECMWF ERA5 vertical profile at the UTC hour nearest to t.
-
-    The query time is rounded to the nearest UTC hour; that hour's file
-    is loaded and returned.  A ValueError is raised if no file exists
-    for the rounded hour (data available: 2024-04-08T00 – 2024-04-09T23 UTC).
-
-    Parameters
-    ----------
-    t : str | datetime | pd.Timestamp | obspy.UTCDateTime
-        Query time.
-    tz_str : str or None
-        IANA timezone for naive inputs (None = UTC).
-    z_max : float or None
-        Maximum height AGL to return (m).  Default 1000 m.
-        Pass None for the full profile.
-
-    Returns
-    -------
-    df_nw : pd.DataFrame
-        ECMWF profile. Columns: z_m, T_K, T_C, u_ms, v_ms, ws_ms, wd_deg.
-
-    Raises
-    ------
-    ValueError
-        If no NWP file exists for the rounded UTC hour.
-
-    Examples
-    --------
-    >>> df_ec = get_nwp_at('2024-04-08 18:00')
-
-    >>> df_ec = get_nwp_at('2024-04-08 13:00', tz_str='America/Chicago')
-
-    >>> df_ec = get_nwp_at('2024-04-08 18:00', z_max=None)  # full profile
-    """
-    t_utc = to_utc_naive(t, tz_str)
-    t_hr  = t_utc.round('h')
-
-    ymdh    = t_hr.strftime('%Y%m%dT%H')
-    file_ec = Path(TMPL_NWP_DATA.format(ymdh=ymdh))
-
-    if not file_ec.exists():
-        raise ValueError(
-            f"No NWP file for {t_hr.strftime('%Y-%m-%dT%H')} UTC.\n"
-            f"Expected: {file_ec}\n"
-            f"Available data: 2024-04-08T00 to 2024-04-09T23 UTC."
-        )
-
-    return _parse_nwp_file(file_ec, z_max)
 
 # Standalone data access and notebook helpers.
 
@@ -1424,15 +1309,15 @@ def era5_comparison(times, geometry, used, representatives):
     """ERA5 directional gradients and celerities for Figure 4 comparison."""
     rows=[]
     for t in times:
-        profile=get_nwp_at(t,z_max=50.1)
+        gradient=get_era5_gradients_at(t)
         _,_,T_K,_,_,u,v=get_aws_at(t)
         c0=float(get_c_ad(T_K))
         for group,receivers in used.items():
             az=circular_mean(geometry.loc[receivers,'az'])
-            a_group=get_sound_profile_gradient(profile.z_m,get_c_eff(profile.T_K,profile.u_ms,profile.v_ms,az))
+            a_group=gradient.a_t + gradient.a_u*np.sin(np.deg2rad(az)) + gradient.a_v*np.cos(np.deg2rad(az))
             receiver=representatives[group]
             az_rec=float(geometry.loc[receiver,'az'])
-            a_rec=get_sound_profile_gradient(profile.z_m,get_c_eff(profile.T_K,profile.u_ms,profile.v_ms,az_rec))
+            a_rec=gradient.a_t + gradient.a_u*np.sin(np.deg2rad(az_rec)) + gradient.a_v*np.cos(np.deg2rad(az_rec))
             c_model=float(celerity_vec(np.array([a_rec]),float(geometry.loc[receiver,'dist']),11.0,c0,c0)[0])
             rows.append(dict(group=group,t_utc=t,a_E=a_group,a_E_receiver=a_rec,c0_ad=c0,C_model=c_model,
                              regime='up' if a_rec<0 else 'down'))

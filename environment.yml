@@ -1,4 +1,4 @@
-name: smu_erdc_example
+name: sa
 channels:
   - conda-forge
 dependencies:
